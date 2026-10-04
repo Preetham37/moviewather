@@ -190,7 +190,26 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-            // ── 2. Data Section ───────────────────────────────────────────────
+            // ── 2. Movie Identification Section ───────────────────────────────
+            SettingsSectionHeader(title = "Movie Identification")
+
+            SettingsActionRow(
+                icon = Icons.Outlined.Key,
+                title = "TMDb API Key",
+                subtitle = if (tmdbApiKey.isNotBlank()) {
+                    "Configured (${tmdbApiKey.take(4)}...${tmdbApiKey.takeLast(4)})"
+                } else if (com.example.moviewather.BuildConfig.TMDB_API_KEY.isNotBlank()) {
+                    "Configured via Build"
+                } else {
+                    "Optional: tap to configure for live online identification"
+                },
+                onClick = { showApiKeyDialog = true },
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // ── 3. Data Section ───────────────────────────────────────────────
             SettingsSectionHeader(title = "Data")
 
             SettingsActionRow(
@@ -213,19 +232,6 @@ fun SettingsScreen(
             )
 
             SettingsActionRow(
-                icon = Icons.Outlined.Key,
-                title = "TMDb API Key",
-                subtitle = if (tmdbApiKey.isNotBlank()) {
-                    "Configured (${tmdbApiKey.take(4)}...${tmdbApiKey.takeLast(4)})"
-                } else if (com.example.moviewather.BuildConfig.TMDB_API_KEY.isNotBlank()) {
-                    "Configured via Build"
-                } else {
-                    "Optional: tap to configure for live online identification"
-                },
-                onClick = { showApiKeyDialog = true },
-            )
-
-            SettingsActionRow(
                 icon = Icons.Outlined.CleaningServices,
                 title = "Clear All Data",
                 subtitle = "Permanently remove all movies and categories",
@@ -236,13 +242,13 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-            // ── 3. About Section ──────────────────────────────────────────────
+            // ── 4. About Section ──────────────────────────────────────────────
             SettingsSectionHeader(title = "About")
 
             SettingsActionRow(
                 icon = Icons.Outlined.Info,
                 title = "Movie Watcher",
-                subtitle = "Version 1.0\n\nA simple personal movie watchlist designed to help you save and find the movies you want to watch.",
+                subtitle = "Version 1.0\n\nA clean personal movie watchlist designed to help you organize and track movies you want to watch.",
                 onClick = {},
             )
 

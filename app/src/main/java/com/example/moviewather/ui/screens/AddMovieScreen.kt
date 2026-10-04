@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -191,130 +194,140 @@ fun AddMovieScreen(
 
                 if (selectedTab == 0) {
                     // ── Single Movie Form ─────────────────────────────────────
-                    OutlinedTextField(
-                        value = singleTitle,
-                        onValueChange = { singleTitle = it },
-                        label = { Text("Movie Title") },
-                        placeholder = { Text("e.g. Dune") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Explicit Movie Identification Action
-                    OutlinedButton(
-                        onClick = { startMetadataSearch(singleTitle) },
-                        enabled = singleTitle.isNotBlank() && !isSearchingMetadata,
-                        modifier = Modifier.fillMaxWidth(),
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
                     ) {
-                        if (isSearchingMetadata) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Searching Movie Information...")
-                        } else {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Search Movie Information")
-                        }
-                    }
-
-                    // Display Selected Metadata preview card if movie was identified
-                    selectedMetadata?.let { meta ->
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Card(
+                        OutlinedTextField(
+                            value = singleTitle,
+                            onValueChange = { singleTitle = it },
+                            label = { Text("Movie Title") },
+                            placeholder = { Text("e.g. Dune") },
+                            singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                            ),
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Explicit Movie Identification Action
+                        OutlinedButton(
+                            onClick = { startMetadataSearch(singleTitle) },
+                            enabled = singleTitle.isNotBlank() && !isSearchingMetadata,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                            if (isSearchingMetadata) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Searching Movie Information...")
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Search Movie Information")
+                            }
+                        }
+
+                        // Display Selected Metadata preview card if movie was identified
+                        selectedMetadata?.let { meta ->
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                ),
                             ) {
-                                if (!meta.posterUrl.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = meta.posterUrl,
-                                        contentDescription = meta.title,
-                                        modifier = Modifier
-                                            .size(width = 44.dp, height = 66.dp)
-                                            .clip(RoundedCornerShape(6.dp)),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = meta.title,
-                                            style = MaterialTheme.typography.titleMedium,
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    if (!meta.posterUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = meta.posterUrl,
+                                            contentDescription = meta.title,
+                                            modifier = Modifier
+                                                .size(width = 44.dp, height = 66.dp)
+                                                .clip(RoundedCornerShape(6.dp)),
+                                            contentScale = ContentScale.Crop,
                                         )
-                                        if (meta.releaseYear != null) {
-                                            Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                text = "(${meta.releaseYear})",
-                                                style = MaterialTheme.typography.labelLarge,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                text = meta.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false),
+                                            )
+                                            if (meta.releaseYear != null) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "(${meta.releaseYear})",
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                            }
+                                        }
+                                        if (!meta.director.isNullOrBlank()) {
+                                            Text(
+                                                text = "Directed by ${meta.director}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        if (meta.genres.isNotEmpty()) {
+                                            Text(
+                                                text = meta.genresDisplay,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
-                                    if (!meta.director.isNullOrBlank()) {
-                                        Text(
-                                            text = "Directed by ${meta.director}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    IconButton(onClick = { selectedMetadata = null }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Close,
+                                            contentDescription = "Remove metadata",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
-                                    if (meta.genres.isNotEmpty()) {
-                                        Text(
-                                            text = meta.genresDisplay,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = { selectedMetadata = null }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Close,
-                                        contentDescription = "Remove metadata",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = singleNotes,
-                        onValueChange = { singleNotes = it },
-                        label = { Text("Notes (optional)") },
-                        placeholder = { Text("e.g. Recommended by a friend") },
-                        maxLines = 3,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                        OutlinedTextField(
+                            value = singleNotes,
+                            onValueChange = { singleNotes = it },
+                            label = { Text("Notes (optional)") },
+                            placeholder = { Text("e.g. Recommended by a friend") },
+                            maxLines = 3,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                    Button(
-                        onClick = {
-                            commitSaveMovie(singleTitle, singleNotes, selectedMetadata)
-                        },
-                        enabled = singleTitle.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Add to Watchlist")
+                        Button(
+                            onClick = {
+                                commitSaveMovie(singleTitle, singleNotes, selectedMetadata)
+                            },
+                            enabled = singleTitle.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Add to Watchlist")
+                        }
                     }
                 } else {
                     // ── Bulk Add Input Form ───────────────────────────────────

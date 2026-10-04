@@ -58,7 +58,7 @@ fun SelectMovieIdentificationDialog(
         title = {
             Column {
                 Text(
-                    text = "Which movie did you mean?",
+                    text = "Select the movie you mean",
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Spacer(modifier = Modifier.height(4.dp))

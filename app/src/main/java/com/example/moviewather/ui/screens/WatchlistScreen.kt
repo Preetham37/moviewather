@@ -59,7 +59,9 @@ import coil.compose.AsyncImage
 import com.example.moviewather.data.local.entity.Movie
 import com.example.moviewather.ui.components.DeleteMovieDialog
 import com.example.moviewather.ui.components.EmptyStateMessage
+import com.example.moviewather.ui.components.FavoriteIconButton
 import com.example.moviewather.ui.components.MainTopBar
+import com.example.moviewather.ui.components.MovieRow
 import com.example.moviewather.ui.components.SearchBar
 import com.example.moviewather.ui.components.SortDropdownButton
 import com.example.moviewather.ui.model.WatchlistSortOrder
@@ -236,21 +238,11 @@ private fun WatchlistMovieCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onMovieClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    MovieRow(
+        movie = movie,
+        onMovieClick = onMovieClick,
+        modifier = modifier,
+        leadingContent = {
             Checkbox(
                 checked = false,
                 onCheckedChange = { onMarkWatched() },
@@ -258,93 +250,12 @@ private fun WatchlistMovieCard(
                     uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            // Consistent poster thumbnail / placeholder slot for visual alignment
-            if (!movie.posterUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = movie.posterUrl,
-                    contentDescription = movie.title,
-                    modifier = Modifier
-                        .size(width = 40.dp, height = 58.dp)
-                        .clip(RoundedCornerShape(6.dp)),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(width = 40.dp, height = 58.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Movie,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = movie.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (movie.releaseYear != null || movie.notes.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (movie.releaseYear != null) {
-                            Text(
-                                text = movie.releaseYear.toString(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        if (movie.releaseYear != null && movie.notes.isNotBlank()) {
-                            Text(
-                                text = " • ",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            )
-                        }
-                        if (movie.notes.isNotBlank()) {
-                            Text(
-                                text = movie.notes,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            IconButton(
+        },
+        trailingActions = {
+            FavoriteIconButton(
+                isFavorite = movie.isFavorite,
                 onClick = onToggleFavorite,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    imageVector = if (movie.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                    contentDescription = if (movie.isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (movie.isFavorite) Color(0xFFFFB300) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
+            )
             IconButton(
                 onClick = onDelete,
                 modifier = Modifier.size(36.dp),
@@ -356,6 +267,6 @@ private fun WatchlistMovieCard(
                     modifier = Modifier.size(20.dp),
                 )
             }
-        }
-    }
+        },
+    )
 }

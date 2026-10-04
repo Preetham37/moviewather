@@ -47,6 +47,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,9 +57,12 @@ import com.example.moviewather.data.local.entity.Movie
 import com.example.moviewather.ui.components.DeleteCategoryDialog
 import com.example.moviewather.ui.components.EditCategoryDialog
 import com.example.moviewather.ui.components.EmptyStateMessage
+import com.example.moviewather.ui.components.FavoriteIconButton
+import com.example.moviewather.ui.components.MovieRow
 import com.example.moviewather.ui.components.SearchBar
 import com.example.moviewather.ui.components.SortDropdownButton
 import com.example.moviewather.ui.model.WatchlistSortOrder
+import com.example.moviewather.ui.util.DateFormatter
 import com.example.moviewather.ui.viewmodel.MovieViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -226,6 +231,7 @@ fun CategoryDetailsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
+                    contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(filteredMovies, key = { it.id }) { movie ->
@@ -280,20 +286,15 @@ private fun CategoryMovieCard(
     onRemoveFromCategory: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onMovieClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    val watchedDateStr = if (movie.isWatched && movie.dateWatched != null) {
+        "Watched ${DateFormatter.formatDate(movie.dateWatched)}"
+    } else null
+
+    MovieRow(
+        movie = movie,
+        onMovieClick = onMovieClick,
+        modifier = modifier,
+        leadingContent = {
             Checkbox(
                 checked = movie.isWatched,
                 onCheckedChange = { onToggleWatched() },
@@ -303,57 +304,24 @@ private fun CategoryMovieCard(
                     uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = buildAnnotatedString {
-                        append(movie.title)
-                        if (movie.releaseYear != null) {
-                            append(" ")
-                            withStyle(
-                                SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            ) {
-                                append("(${movie.releaseYear})")
-                            }
-                        }
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (movie.notes.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = movie.notes,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (movie.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                    contentDescription = if (movie.isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (movie.isFavorite) Color(0xFFFFB300) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
-
-            IconButton(onClick = onRemoveFromCategory) {
+        },
+        subtitle = watchedDateStr,
+        trailingActions = {
+            FavoriteIconButton(
+                isFavorite = movie.isFavorite,
+                onClick = onToggleFavorite,
+            )
+            IconButton(
+                onClick = onRemoveFromCategory,
+                modifier = Modifier.size(36.dp),
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = "Remove from category",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp),
                 )
             }
-        }
-    }
+        },
+    )
 }
