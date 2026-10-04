@@ -13,13 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * A polished empty-state layout used on screens that have no content yet.
+ * Empty-state layout matching Screen 10 of the reference design.
  *
- * Renders a centred icon, headline, supporting body text, and an optional action slot.
+ * Renders a centered icon, headline, supporting description, and an optional action button.
  */
 @Composable
 fun EmptyStateMessage(
@@ -32,19 +33,19 @@ fun EmptyStateMessage(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 32.dp),
+            .padding(horizontal = 40.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = headline,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )

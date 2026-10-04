@@ -94,6 +94,10 @@ interface CategoryDao {
     @Query("SELECT * FROM movie_category_cross_ref")
     suspend fun getAllCrossRefsList(): List<MovieCategoryCrossRef>
 
+    /** Reactive stream of all cross-references for filtering. */
+    @Query("SELECT * FROM movie_category_cross_ref")
+    fun getAllCrossRefs(): Flow<List<MovieCategoryCrossRef>>
+
     /** Permanently deletes all rows from the categories table. */
     @Query("DELETE FROM categories")
     suspend fun clearAllCategories()

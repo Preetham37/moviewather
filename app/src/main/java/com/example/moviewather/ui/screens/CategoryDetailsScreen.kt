@@ -1,36 +1,25 @@
 package com.example.moviewather.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,30 +36,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.moviewather.data.local.entity.Movie
 import com.example.moviewather.ui.components.DeleteCategoryDialog
+import com.example.moviewather.ui.components.DeleteMovieDialog
 import com.example.moviewather.ui.components.EditCategoryDialog
+import com.example.moviewather.ui.components.EditMovieDialog
 import com.example.moviewather.ui.components.EmptyStateMessage
-import com.example.moviewather.ui.components.FavoriteIconButton
+import com.example.moviewather.ui.components.ManageMovieCategoriesDialog
 import com.example.moviewather.ui.components.MovieRow
 import com.example.moviewather.ui.components.SearchBar
-import com.example.moviewather.ui.components.SortDropdownButton
-import com.example.moviewather.ui.model.WatchlistSortOrder
+import com.example.moviewather.ui.components.SortFilterBottomSheet
+import com.example.moviewather.ui.model.MovieFilterState
+import com.example.moviewather.ui.model.MovieSortOption
 import com.example.moviewather.ui.util.DateFormatter
 import com.example.moviewather.ui.viewmodel.MovieViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Dedicated Category Details screen displaying all movies assigned to a category.
- *
- * Supports local search within the category, presentation sorting,
- * watched-status toggling, removal from category, and category renaming/deletion.
+ * Category Details screen matching Screen 7 of the reference mockup.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +72,7 @@ fun CategoryDetailsScreen(
     var hasLoadedInitially by remember { mutableStateOf(false) }
 
     val searchQueryState = remember { MutableStateFlow("") }
-    val sortOrderState = remember { MutableStateFlow(WatchlistSortOrder.RECENTLY_ADDED) }
+    val sortOrderState = remember { MutableStateFlow(MovieSortOption.RECENTLY_ADDED) }
 
     val searchQuery by searchQueryState.collectAsState()
     val sortOrder by sortOrderState.collectAsState()
@@ -98,14 +85,17 @@ fun CategoryDetailsScreen(
         viewModel.getMoviesForCategory(categoryId)
     }.collectAsState(initial = emptyList())
 
-    var showEditDialog by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditCategoryDialog by remember { mutableStateOf(false) }
+    var showDeleteCategoryDialog by remember { mutableStateOf(false) }
+    var showSortFilterSheet by remember { mutableStateOf(false) }
+    var movieToDelete by remember { mutableStateOf<Movie?>(null) }
+    var movieToEdit by remember { mutableStateOf<Movie?>(null) }
+    var movieForCategories by remember { mutableStateOf<Movie?>(null) }
 
     LaunchedEffect(category) {
         if (category != null) {
             hasLoadedInitially = true
         } else if (hasLoadedInitially) {
-            // Category was deleted, navigate back
             onNavigateUp()
         }
     }
@@ -125,7 +115,20 @@ fun CategoryDetailsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(currentCategory.name) },
+                title = {
+                    Column {
+                        Text(
+                            text = currentCategory.name,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        )
+                        val countLabel = if (allCategoryMovies.size == 1) "1 movie" else "${allCategoryMovies.size} movies"
+                        Text(
+                            text = countLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
@@ -135,13 +138,13 @@ fun CategoryDetailsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showEditDialog = true }) {
+                    IconButton(onClick = { showEditCategoryDialog = true }) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = "Rename category",
                         )
                     }
-                    IconButton(onClick = { showDeleteDialog = true }) {
+                    IconButton(onClick = { showDeleteCategoryDialog = true }) {
                         Icon(
                             imageVector = Icons.Outlined.DeleteOutline,
                             contentDescription = "Delete category",
@@ -150,8 +153,8 @@ fun CategoryDetailsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
                 ),
             )
         },
@@ -162,43 +165,37 @@ fun CategoryDetailsScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             SearchBar(
                 query = searchQuery,
                 onQueryChange = { searchQueryState.value = it },
+                placeholder = "Search in ${currentCategory.name}...",
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Header: Count and Sort Dropdown ───────────────────────────────
+            // ── Header: Count and Sort/Filter Button ─────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
-                        text = currentCategory.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    if (allCategoryMovies.isNotEmpty()) {
-                        val countText = if (filteredMovies.size == 1) "1 movie" else "${filteredMovies.size} movies"
-                        Text(
-                            text = if (searchQuery.isNotBlank()) "$countText found" else countText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+                Text(
+                    text = "${filteredMovies.size} movies",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
 
-                if (allCategoryMovies.isNotEmpty()) {
-                    SortDropdownButton(
-                        options = WatchlistSortOrder.entries,
-                        selected = sortOrder,
-                        onSelect = { sortOrderState.value = it },
-                        labelProvider = { it.label },
+                IconButton(
+                    onClick = { showSortFilterSheet = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tune,
+                        contentDescription = "Sort",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -235,20 +232,26 @@ fun CategoryDetailsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(filteredMovies, key = { it.id }) { movie ->
-                        CategoryMovieCard(
+                        val watchedDateStr = if (movie.isWatched && movie.dateWatched != null) {
+                            "Watched on ${DateFormatter.formatDate(movie.dateWatched)}"
+                        } else null
+
+                        MovieRow(
                             movie = movie,
+                            isChecked = movie.isWatched,
+                            onCheckedChange = {
+                                if (movie.isWatched) viewModel.markUnwatched(movie) else viewModel.markWatched(movie)
+                            },
                             onMovieClick = { onMovieClick(movie) },
-                            onToggleWatched = {
-                                if (movie.isWatched) {
-                                    viewModel.markUnwatched(movie)
-                                } else {
-                                    viewModel.markWatched(movie)
-                                }
-                            },
                             onToggleFavorite = { viewModel.toggleFavorite(movie) },
-                            onRemoveFromCategory = {
-                                viewModel.removeMovieFromCategory(movie.id, currentCategory.id)
+                            onEditClick = { movieToEdit = movie },
+                            onToggleWatched = {
+                                if (movie.isWatched) viewModel.markUnwatched(movie) else viewModel.markWatched(movie)
                             },
+                            onManageCategoriesClick = { movieForCategories = movie },
+                            onDeleteClick = { movieToDelete = movie },
+                            subtitleOverride = watchedDateStr,
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -256,72 +259,64 @@ fun CategoryDetailsScreen(
         }
     }
 
-    if (showEditDialog) {
-        EditCategoryDialog(
-            category = currentCategory,
-            viewModel = viewModel,
-            onDismiss = { showEditDialog = false },
+    if (showSortFilterSheet) {
+        SortFilterBottomSheet(
+            onDismissRequest = { showSortFilterSheet = false },
+            currentSort = sortOrder,
+            currentFilters = MovieFilterState(),
+            onApply = { sort, _ ->
+                sortOrderState.value = sort
+            },
+            onReset = {
+                sortOrderState.value = MovieSortOption.RECENTLY_ADDED
+            },
         )
     }
 
-    if (showDeleteDialog) {
+    if (showEditCategoryDialog) {
+        EditCategoryDialog(
+            category = currentCategory,
+            viewModel = viewModel,
+            onDismiss = { showEditCategoryDialog = false },
+        )
+    }
+
+    if (showDeleteCategoryDialog) {
         DeleteCategoryDialog(
             category = currentCategory,
             onConfirm = {
                 viewModel.deleteCategory(currentCategory)
-                showDeleteDialog = false
+                showDeleteCategoryDialog = false
                 onNavigateUp()
             },
-            onDismiss = { showDeleteDialog = false },
+            onDismiss = { showDeleteCategoryDialog = false },
         )
     }
-}
 
-@Composable
-private fun CategoryMovieCard(
-    movie: Movie,
-    onMovieClick: () -> Unit,
-    onToggleWatched: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onRemoveFromCategory: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val watchedDateStr = if (movie.isWatched && movie.dateWatched != null) {
-        "Watched ${DateFormatter.formatDate(movie.dateWatched)}"
-    } else null
+    movieToEdit?.let { movie ->
+        EditMovieDialog(
+            movie = movie,
+            viewModel = viewModel,
+            onDismiss = { movieToEdit = null },
+        )
+    }
 
-    MovieRow(
-        movie = movie,
-        onMovieClick = onMovieClick,
-        modifier = modifier,
-        leadingContent = {
-            Checkbox(
-                checked = movie.isWatched,
-                onCheckedChange = { onToggleWatched() },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = MaterialTheme.colorScheme.primary,
-                    checkmarkColor = MaterialTheme.colorScheme.onPrimary,
-                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        },
-        subtitle = watchedDateStr,
-        trailingActions = {
-            FavoriteIconButton(
-                isFavorite = movie.isFavorite,
-                onClick = onToggleFavorite,
-            )
-            IconButton(
-                onClick = onRemoveFromCategory,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Close,
-                    contentDescription = "Remove from category",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        },
-    )
+    movieForCategories?.let { movie ->
+        ManageMovieCategoriesDialog(
+            movie = movie,
+            viewModel = viewModel,
+            onDismiss = { movieForCategories = null },
+        )
+    }
+
+    movieToDelete?.let { movie ->
+        DeleteMovieDialog(
+            movie = movie,
+            onConfirm = {
+                viewModel.deleteMovie(movie)
+                movieToDelete = null
+            },
+            onDismiss = { movieToDelete = null },
+        )
+    }
 }

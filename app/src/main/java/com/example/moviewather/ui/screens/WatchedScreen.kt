@@ -1,37 +1,24 @@
 package com.example.moviewather.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Undo
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,31 +35,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.example.moviewather.data.local.entity.Movie
 import com.example.moviewather.ui.components.DeleteMovieDialog
+import com.example.moviewather.ui.components.EditMovieDialog
 import com.example.moviewather.ui.components.EmptyStateMessage
-import com.example.moviewather.ui.components.FavoriteIconButton
 import com.example.moviewather.ui.components.MainTopBar
+import com.example.moviewather.ui.components.ManageMovieCategoriesDialog
 import com.example.moviewather.ui.components.MovieRow
 import com.example.moviewather.ui.components.SearchBar
-import com.example.moviewather.ui.components.SortDropdownButton
-import com.example.moviewather.ui.model.WatchedSortOrder
+import com.example.moviewather.ui.components.SortFilterBottomSheet
 import com.example.moviewather.ui.util.DateFormatter
 import com.example.moviewather.ui.viewmodel.MovieViewModel
 
 /**
- * Watched screen – displays movies the user has finished watching.
+ * Watched screen matching Screen 8 of the reference mockup.
  *
- * Supports real-time local search, flexible presentation sorting,
- * mark as unwatched (undo) interaction, quick favorite toggling, and deletion with confirmation.
+ * Information-dense, compact rows with checked indicators, watched dates,
+ * real-time search, sort & filter bottom sheet, and 3-dot overflow options.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,10 +66,14 @@ fun WatchedScreen(
 ) {
     val searchQuery by viewModel.watchedSearchQuery.collectAsState()
     val sortOrder by viewModel.watchedSortOrder.collectAsState()
+    val filterState by viewModel.watchedFilterState.collectAsState()
     val watchedMovies by viewModel.filteredWatched.collectAsState()
     val totalWatchedCount by viewModel.watchedMovies.collectAsState()
 
+    var showSortFilterSheet by remember { mutableStateOf(false) }
     var movieToDelete by remember { mutableStateOf<Movie?>(null) }
+    var movieToEdit by remember { mutableStateOf<Movie?>(null) }
+    var movieForCategories by remember { mutableStateOf<Movie?>(null) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
@@ -109,16 +95,17 @@ fun WatchedScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             SearchBar(
                 query = searchQuery,
                 onQueryChange = { viewModel.setWatchedSearchQuery(it) },
+                placeholder = "Search watched movies...",
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Header: Title, Count, and Sort Dropdown ───────────────────────
+            // ── Section Header: Title, Count, and Sort/Filter Button ──────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -127,25 +114,26 @@ fun WatchedScreen(
                 Column {
                     Text(
                         text = "Watched",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    if (totalWatchedCount.isNotEmpty()) {
-                        val countText = if (watchedMovies.size == 1) "1 movie" else "${watchedMovies.size} movies"
-                        Text(
-                            text = if (searchQuery.isNotBlank()) "$countText found" else countText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    val countText = if (watchedMovies.size == 1) "1 movie" else "${watchedMovies.size} movies"
+                    Text(
+                        text = if (searchQuery.isNotBlank() || filterState.isActive) "$countText filtered" else countText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
 
-                if (totalWatchedCount.isNotEmpty()) {
-                    SortDropdownButton(
-                        options = WatchedSortOrder.entries,
-                        selected = sortOrder,
-                        onSelect = { viewModel.setWatchedSortOrder(it) },
-                        labelProvider = { it.label },
+                IconButton(
+                    onClick = { showSortFilterSheet = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tune,
+                        contentDescription = "Sort and filter",
+                        tint = if (filterState.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -165,10 +153,24 @@ fun WatchedScreen(
                             headline = "No movies found",
                             body = "No movie in this list matches\n\"$searchQuery\".",
                         )
+                    } else if (filterState.isActive) {
+                        EmptyStateMessage(
+                            icon = Icons.Outlined.Tune,
+                            headline = "No matching movies",
+                            body = "No watched movies match the selected filters.",
+                            action = {
+                                Button(
+                                    onClick = { viewModel.resetWatchedSortAndFilter() },
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
+                                    Text("Reset Filters")
+                                }
+                            },
+                        )
                     } else {
                         EmptyStateMessage(
                             icon = Icons.Outlined.CheckCircle,
-                            headline = "No watched movies",
+                            headline = "No watched movies yet",
                             body = "Movies you finish watching\nwill appear here.",
                         )
                     }
@@ -178,22 +180,60 @@ fun WatchedScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentPadding = PaddingValues(bottom = 16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(watchedMovies, key = { it.id }) { movie ->
-                        WatchedMovieCard(
+                        val watchedDateStr = movie.dateWatched?.let { "Watched on ${DateFormatter.formatDate(it)}" }
+                        MovieRow(
                             movie = movie,
+                            isChecked = true,
+                            onCheckedChange = { viewModel.markUnwatched(movie) },
                             onMovieClick = { onMovieClick(movie) },
-                            onMarkUnwatched = { viewModel.markUnwatched(movie) },
                             onToggleFavorite = { viewModel.toggleFavorite(movie) },
-                            onDelete = { movieToDelete = movie },
+                            onEditClick = { movieToEdit = movie },
+                            onToggleWatched = { viewModel.markUnwatched(movie) },
+                            onManageCategoriesClick = { movieForCategories = movie },
+                            onDeleteClick = { movieToDelete = movie },
+                            subtitleOverride = watchedDateStr,
                             modifier = Modifier.animateItem(),
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
         }
+    }
+
+    // ── Dialogs & Bottom Sheet ────────────────────────────────────────────────
+
+    if (showSortFilterSheet) {
+        SortFilterBottomSheet(
+            onDismissRequest = { showSortFilterSheet = false },
+            currentSort = sortOrder,
+            currentFilters = filterState,
+            onApply = { sort, filters ->
+                viewModel.setWatchedSortAndFilter(sort, filters)
+            },
+            onReset = {
+                viewModel.resetWatchedSortAndFilter()
+            },
+        )
+    }
+
+    movieToEdit?.let { movie ->
+        EditMovieDialog(
+            movie = movie,
+            viewModel = viewModel,
+            onDismiss = { movieToEdit = null },
+        )
+    }
+
+    movieForCategories?.let { movie ->
+        ManageMovieCategoriesDialog(
+            movie = movie,
+            viewModel = viewModel,
+            onDismiss = { movieForCategories = null },
+        )
     }
 
     movieToDelete?.let { movie ->
@@ -206,49 +246,4 @@ fun WatchedScreen(
             onDismiss = { movieToDelete = null },
         )
     }
-}
-
-@Composable
-private fun WatchedMovieCard(
-    movie: Movie,
-    onMovieClick: () -> Unit,
-    onMarkUnwatched: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val watchedDateStr = movie.dateWatched?.let { "Watched ${DateFormatter.formatDate(it)}" }
-    MovieRow(
-        movie = movie,
-        onMovieClick = onMovieClick,
-        modifier = modifier,
-        leadingContent = {
-            Checkbox(
-                checked = true,
-                onCheckedChange = { onMarkUnwatched() },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = MaterialTheme.colorScheme.primary,
-                    checkmarkColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
-        },
-        subtitle = watchedDateStr,
-        trailingActions = {
-            FavoriteIconButton(
-                isFavorite = movie.isFavorite,
-                onClick = onToggleFavorite,
-            )
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.DeleteOutline,
-                    contentDescription = "Delete ${movie.title}",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        },
-    )
 }

@@ -1,21 +1,30 @@
 package com.example.moviewather.ui.model
 
 /**
- * Sorting options available for the Watchlist screen.
+ * Universal sort options matching the design specification.
  */
-enum class WatchlistSortOrder(val label: String) {
+enum class MovieSortOption(val label: String) {
     RECENTLY_ADDED("Recently Added"),
     OLDEST_ADDED("Oldest Added"),
-    TITLE_A_Z("A → Z"),
-    TITLE_Z_A("Z → A"),
+    TITLE_A_Z("Title (A → Z)"),
+    TITLE_Z_A("Title (Z → A)"),
+    RELEASE_YEAR_NEW_OLD("Release Year (New → Old)"),
+    RELEASE_YEAR_OLD_NEW("Release Year (Old → New)"),
 }
 
 /**
- * Sorting options available for the Watched screen.
+ * Filter criteria state for Watchlist and Watched screens.
  */
-enum class WatchedSortOrder(val label: String) {
-    RECENTLY_WATCHED("Recently Watched"),
-    OLDEST_WATCHED("Oldest Watched"),
-    TITLE_A_Z("A → Z"),
-    TITLE_Z_A("Z → A"),
+data class MovieFilterState(
+    val favoritesOnly: Boolean = false,
+    val withCategories: Boolean = false,
+    val withMetadata: Boolean = false,
+    val withoutMetadata: Boolean = false,
+) {
+    val isActive: Boolean
+        get() = favoritesOnly || withCategories || withMetadata || withoutMetadata
 }
+
+// Compatibility aliases
+typealias WatchlistSortOrder = MovieSortOption
+typealias WatchedSortOrder = MovieSortOption

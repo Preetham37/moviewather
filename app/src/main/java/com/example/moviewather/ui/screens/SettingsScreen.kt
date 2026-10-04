@@ -4,17 +4,24 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Download
@@ -22,6 +29,8 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -41,10 +51,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.moviewather.data.backup.BackupManager
 import com.example.moviewather.data.backup.BackupValidationResult
 import com.example.moviewather.data.backup.DuplicateStrategy
@@ -56,6 +70,10 @@ import com.example.moviewather.ui.components.ImportPreviewDialog
 import com.example.moviewather.ui.components.ImportSuccessDialog
 import com.example.moviewather.ui.components.ThemeSelectionDialog
 import com.example.moviewather.ui.components.TmdbApiKeyDialog
+import com.example.moviewather.ui.theme.DarkBorder
+import com.example.moviewather.ui.theme.DarkCard
+import com.example.moviewather.ui.theme.DarkSurfaceVariant
+import com.example.moviewather.ui.theme.PrimaryBlue
 import com.example.moviewather.ui.viewmodel.MovieViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,8 +83,8 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Settings screen providing Appearance preferences, offline JSON Data backup/restore,
- * data clearance, and application information.
+ * Settings screen matching Screen 9 in reference mockup:
+ * Clean card groupings for Appearance, Movie Identification, Data, and About.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,7 +169,10 @@ fun SettingsScreen(
                 title = {
                     Text(
                         text = "Settings",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 20.sp,
+                        ),
                     )
                 },
                 navigationIcon = {
@@ -159,13 +180,14 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             )
         },
@@ -177,80 +199,122 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            // ── 1. Appearance Section ─────────────────────────────────────────
-            SettingsSectionHeader(title = "Appearance")
+            // ── 1. Appearance Section Card ────────────────────────────────────
+            SettingsSectionTitle(title = "Appearance")
 
-            SettingsActionRow(
-                icon = Icons.Outlined.DarkMode,
-                title = "Theme",
-                subtitle = currentTheme.label,
-                onClick = { showThemeDialog = true },
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+            ) {
+                SettingsCardItem(
+                    icon = Icons.Outlined.DarkMode,
+                    title = "Theme",
+                    subtitle = currentTheme.label,
+                    onClick = { showThemeDialog = true },
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // ── 2. Movie Identification Section ───────────────────────────────
-            SettingsSectionHeader(title = "Movie Identification")
+            // ── 2. Movie Identification Section Card ──────────────────────────
+            SettingsSectionTitle(title = "Movie Identification")
 
-            SettingsActionRow(
-                icon = Icons.Outlined.Key,
-                title = "TMDb API Key",
-                subtitle = if (tmdbApiKey.isNotBlank()) {
-                    "Configured (${tmdbApiKey.take(4)}...${tmdbApiKey.takeLast(4)})"
-                } else if (com.example.moviewather.BuildConfig.TMDB_API_KEY.isNotBlank()) {
-                    "Configured via Build"
-                } else {
-                    "Optional: tap to configure for live online identification"
-                },
-                onClick = { showApiKeyDialog = true },
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+            ) {
+                SettingsCardItem(
+                    icon = Icons.Outlined.Key,
+                    title = "TMDb API Key",
+                    subtitle = if (tmdbApiKey.isNotBlank()) {
+                        "Configured (${tmdbApiKey.take(4)}...${tmdbApiKey.takeLast(4)})"
+                    } else if (com.example.moviewather.BuildConfig.TMDB_API_KEY.isNotBlank()) {
+                        "Configured via Build"
+                    } else {
+                        "Optional: configure for live online movie search"
+                    },
+                    onClick = { showApiKeyDialog = true },
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // ── 3. Data Section ───────────────────────────────────────────────
-            SettingsSectionHeader(title = "Data")
+            // ── 3. Data Section Card ──────────────────────────────────────────
+            SettingsSectionTitle(title = "Data Management")
 
-            SettingsActionRow(
-                icon = Icons.Outlined.Upload,
-                title = "Export Movies",
-                subtitle = "Save a JSON backup of movies and categories",
-                onClick = {
-                    val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                    exportLauncher.launch("movie-watcher-backup-$dateStr.json")
-                },
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+            ) {
+                Column {
+                    SettingsCardItem(
+                        icon = Icons.Outlined.Upload,
+                        title = "Export Movies",
+                        subtitle = "Save a JSON backup of movies and categories",
+                        onClick = {
+                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                            exportLauncher.launch("movie-watcher-backup-$dateStr.json")
+                        },
+                    )
 
-            SettingsActionRow(
-                icon = Icons.Outlined.Download,
-                title = "Import Movies",
-                subtitle = "Restore a Movie Watcher backup file",
-                onClick = {
-                    importLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
-                },
-            )
+                    HorizontalDivider(
+                        color = DarkBorder,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
 
-            SettingsActionRow(
-                icon = Icons.Outlined.CleaningServices,
-                title = "Clear All Data",
-                subtitle = "Permanently remove all movies and categories",
-                titleColor = MaterialTheme.colorScheme.error,
-                onClick = { showClearDataDialog = true },
-            )
+                    SettingsCardItem(
+                        icon = Icons.Outlined.Download,
+                        title = "Import Movies",
+                        subtitle = "Restore a Movie Watcher backup file",
+                        onClick = {
+                            importLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
+                        },
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(
+                        color = DarkBorder,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
 
-            // ── 4. About Section ──────────────────────────────────────────────
-            SettingsSectionHeader(title = "About")
+                    SettingsCardItem(
+                        icon = Icons.Outlined.CleaningServices,
+                        title = "Clear All Data",
+                        subtitle = "Permanently remove all movies and categories",
+                        titleColor = MaterialTheme.colorScheme.error,
+                        onClick = { showClearDataDialog = true },
+                    )
+                }
+            }
 
-            SettingsActionRow(
-                icon = Icons.Outlined.Info,
-                title = "Movie Watcher",
-                subtitle = "Version 1.0\n\nA clean personal movie watchlist designed to help you organize and track movies you want to watch.",
-                onClick = {},
-            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── 4. About Section Card ─────────────────────────────────────────
+            SettingsSectionTitle(title = "About")
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+            ) {
+                SettingsCardItem(
+                    icon = Icons.Outlined.Info,
+                    title = "Movie Watcher",
+                    subtitle = "Version 1.0 • Personal Movie Manager\nLocal-first, offline-capable watchlist & tracker.",
+                    onClick = {},
+                    showChevron = false,
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -320,7 +384,6 @@ fun SettingsScreen(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
             confirmButton = {
@@ -350,54 +413,88 @@ fun SettingsScreen(
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SettingsSectionHeader(
+private fun SettingsSectionTitle(
     title: String,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 6.dp),
-        )
-    }
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge.copy(
+            fontWeight = FontWeight.SemiBold,
+            color = PrimaryBlue,
+            fontSize = 13.sp,
+        ),
+        modifier = modifier.padding(start = 4.dp, bottom = 8.dp),
+    )
 }
 
 @Composable
-private fun SettingsActionRow(
+private fun SettingsCardItem(
     icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    titleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    showChevron: Boolean = true,
 ) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (titleColor == MaterialTheme.colorScheme.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = 16.dp),
-        )
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = if (titleColor == MaterialTheme.colorScheme.error) {
+                MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+            } else {
+                DarkSurfaceVariant
+            },
+            modifier = Modifier.size(38.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (titleColor == MaterialTheme.colorScheme.error) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        PrimaryBlue
+                    },
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                ),
                 color = titleColor,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    lineHeight = 16.sp,
+                ),
+            )
+        }
+
+        if (showChevron) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(20.dp),
             )
         }
     }

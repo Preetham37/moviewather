@@ -17,6 +17,8 @@ import com.example.moviewather.data.preference.AppTheme
 import com.example.moviewather.data.preference.UserPreferencesRepository
 import com.example.moviewather.data.util.DuplicateCheckResult
 import com.example.moviewather.data.util.MovieDuplicateDetector
+import com.example.moviewather.ui.model.MovieFilterState
+import com.example.moviewather.ui.model.MovieSortOption
 import com.example.moviewather.ui.model.WatchedSortOrder
 import com.example.moviewather.ui.model.WatchlistSortOrder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,14 +71,20 @@ class MovieViewModel(
     private val _watchlistSearchQuery = MutableStateFlow("")
     val watchlistSearchQuery: StateFlow<String> = _watchlistSearchQuery.asStateFlow()
 
-    private val _watchlistSortOrder = MutableStateFlow(WatchlistSortOrder.RECENTLY_ADDED)
-    val watchlistSortOrder: StateFlow<WatchlistSortOrder> = _watchlistSortOrder.asStateFlow()
+    private val _watchlistSortOrder = MutableStateFlow(MovieSortOption.RECENTLY_ADDED)
+    val watchlistSortOrder: StateFlow<MovieSortOption> = _watchlistSortOrder.asStateFlow()
+
+    private val _watchlistFilterState = MutableStateFlow(MovieFilterState())
+    val watchlistFilterState: StateFlow<MovieFilterState> = _watchlistFilterState.asStateFlow()
 
     private val _watchedSearchQuery = MutableStateFlow("")
     val watchedSearchQuery: StateFlow<String> = _watchedSearchQuery.asStateFlow()
 
-    private val _watchedSortOrder = MutableStateFlow(WatchedSortOrder.RECENTLY_WATCHED)
-    val watchedSortOrder: StateFlow<WatchedSortOrder> = _watchedSortOrder.asStateFlow()
+    private val _watchedSortOrder = MutableStateFlow(MovieSortOption.RECENTLY_ADDED)
+    val watchedSortOrder: StateFlow<MovieSortOption> = _watchedSortOrder.asStateFlow()
+
+    private val _watchedFilterState = MutableStateFlow(MovieFilterState())
+    val watchedFilterState: StateFlow<MovieFilterState> = _watchedFilterState.asStateFlow()
 
     // ─── Underlying Data Streams ──────────────────────────────────────────────
 
@@ -121,19 +129,38 @@ class MovieViewModel(
         repository.unwatchedMovies,
         _watchlistSearchQuery,
         _watchlistSortOrder,
-    ) { movies, query, sortOrder ->
-        val filtered = if (query.isBlank()) {
+        _watchlistFilterState,
+        repository.allCrossRefs,
+    ) { movies, query, sortOrder, filters, crossRefs ->
+        val queryFiltered = if (query.isBlank()) {
             movies
         } else {
             val trimmed = query.trim()
             movies.filter { it.title.contains(trimmed, ignoreCase = true) }
         }
 
+        val categorizedIds = crossRefs.map { it.movieId }.toSet()
+        var result = queryFiltered
+        if (filters.favoritesOnly) {
+            result = result.filter { it.isFavorite }
+        }
+        if (filters.withCategories) {
+            result = result.filter { it.id in categorizedIds }
+        }
+        if (filters.withMetadata) {
+            result = result.filter { it.externalId != null }
+        }
+        if (filters.withoutMetadata) {
+            result = result.filter { it.externalId == null }
+        }
+
         when (sortOrder) {
-            WatchlistSortOrder.RECENTLY_ADDED -> filtered.sortedByDescending { it.dateAdded }
-            WatchlistSortOrder.OLDEST_ADDED -> filtered.sortedBy { it.dateAdded }
-            WatchlistSortOrder.TITLE_A_Z -> filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
-            WatchlistSortOrder.TITLE_Z_A -> filtered.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
+            MovieSortOption.RECENTLY_ADDED -> result.sortedByDescending { it.dateAdded }
+            MovieSortOption.OLDEST_ADDED -> result.sortedBy { it.dateAdded }
+            MovieSortOption.TITLE_A_Z -> result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+            MovieSortOption.TITLE_Z_A -> result.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
+            MovieSortOption.RELEASE_YEAR_NEW_OLD -> result.sortedWith(compareByDescending<Movie> { it.releaseYear ?: 0 }.thenByDescending { it.dateAdded })
+            MovieSortOption.RELEASE_YEAR_OLD_NEW -> result.sortedWith(compareBy<Movie> { it.releaseYear ?: Int.MAX_VALUE }.thenBy { it.dateAdded })
         }
     }.stateIn(
         scope = viewModelScope,
@@ -145,19 +172,38 @@ class MovieViewModel(
         repository.watchedMovies,
         _watchedSearchQuery,
         _watchedSortOrder,
-    ) { movies, query, sortOrder ->
-        val filtered = if (query.isBlank()) {
+        _watchedFilterState,
+        repository.allCrossRefs,
+    ) { movies, query, sortOrder, filters, crossRefs ->
+        val queryFiltered = if (query.isBlank()) {
             movies
         } else {
             val trimmed = query.trim()
             movies.filter { it.title.contains(trimmed, ignoreCase = true) }
         }
 
+        val categorizedIds = crossRefs.map { it.movieId }.toSet()
+        var result = queryFiltered
+        if (filters.favoritesOnly) {
+            result = result.filter { it.isFavorite }
+        }
+        if (filters.withCategories) {
+            result = result.filter { it.id in categorizedIds }
+        }
+        if (filters.withMetadata) {
+            result = result.filter { it.externalId != null }
+        }
+        if (filters.withoutMetadata) {
+            result = result.filter { it.externalId == null }
+        }
+
         when (sortOrder) {
-            WatchedSortOrder.RECENTLY_WATCHED -> filtered.sortedByDescending { it.dateWatched ?: 0L }
-            WatchedSortOrder.OLDEST_WATCHED -> filtered.sortedBy { it.dateWatched ?: Long.MAX_VALUE }
-            WatchedSortOrder.TITLE_A_Z -> filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
-            WatchedSortOrder.TITLE_Z_A -> filtered.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
+            MovieSortOption.RECENTLY_ADDED -> result.sortedByDescending { it.dateWatched ?: it.dateAdded }
+            MovieSortOption.OLDEST_ADDED -> result.sortedBy { it.dateWatched ?: it.dateAdded }
+            MovieSortOption.TITLE_A_Z -> result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+            MovieSortOption.TITLE_Z_A -> result.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
+            MovieSortOption.RELEASE_YEAR_NEW_OLD -> result.sortedWith(compareByDescending<Movie> { it.releaseYear ?: 0 }.thenByDescending { it.dateAdded })
+            MovieSortOption.RELEASE_YEAR_OLD_NEW -> result.sortedWith(compareBy<Movie> { it.releaseYear ?: Int.MAX_VALUE }.thenBy { it.dateAdded })
         }
     }.stateIn(
         scope = viewModelScope,
@@ -171,16 +217,36 @@ class MovieViewModel(
         _watchlistSearchQuery.value = query
     }
 
-    fun setWatchlistSortOrder(sortOrder: WatchlistSortOrder) {
+    fun setWatchlistSortOrder(sortOrder: MovieSortOption) {
         _watchlistSortOrder.value = sortOrder
+    }
+
+    fun setWatchlistSortAndFilter(sort: MovieSortOption, filters: MovieFilterState) {
+        _watchlistSortOrder.value = sort
+        _watchlistFilterState.value = filters
+    }
+
+    fun resetWatchlistSortAndFilter() {
+        _watchlistSortOrder.value = MovieSortOption.RECENTLY_ADDED
+        _watchlistFilterState.value = MovieFilterState()
     }
 
     fun setWatchedSearchQuery(query: String) {
         _watchedSearchQuery.value = query
     }
 
-    fun setWatchedSortOrder(sortOrder: WatchedSortOrder) {
+    fun setWatchedSortOrder(sortOrder: MovieSortOption) {
         _watchedSortOrder.value = sortOrder
+    }
+
+    fun setWatchedSortAndFilter(sort: MovieSortOption, filters: MovieFilterState) {
+        _watchedSortOrder.value = sort
+        _watchedFilterState.value = filters
+    }
+
+    fun resetWatchedSortAndFilter() {
+        _watchedSortOrder.value = MovieSortOption.RECENTLY_ADDED
+        _watchedFilterState.value = MovieFilterState()
     }
 
     // ─── Duplicate & Similarity Checking ──────────────────────────────────────
@@ -454,6 +520,8 @@ class MovieViewModel(
             WatchlistSortOrder.OLDEST_ADDED -> filtered.sortedBy { it.dateAdded }
             WatchlistSortOrder.TITLE_A_Z -> filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
             WatchlistSortOrder.TITLE_Z_A -> filtered.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
+            WatchlistSortOrder.RELEASE_YEAR_NEW_OLD -> filtered.sortedByDescending { it.releaseYear ?: 0 }
+            WatchlistSortOrder.RELEASE_YEAR_OLD_NEW -> filtered.sortedBy { it.releaseYear ?: Int.MAX_VALUE }
         }
     }
 

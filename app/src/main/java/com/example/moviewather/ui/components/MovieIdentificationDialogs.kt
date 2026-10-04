@@ -1,6 +1,7 @@
 package com.example.moviewather.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,35 +16,44 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.WifiOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.moviewather.data.metadata.MovieMetadataResult
+import com.example.moviewather.ui.theme.DarkBorder
+import com.example.moviewather.ui.theme.DarkCard
+import com.example.moviewather.ui.theme.PrimaryBlue
 
 /**
- * Dialog displaying candidate movies returned by the metadata provider.
+ * Dialog displaying candidate movies returned by TMDB.
  *
- * Implements the core principle: "Movie Watcher must NEVER silently decide which movie
- * the user means when multiple possibilities exist. The user makes the final decision."
+ * "Movie Watcher must NEVER silently decide which movie the user means
+ * when multiple possibilities exist. The user makes the final decision."
  */
 @Composable
 fun SelectMovieIdentificationDialog(
@@ -55,11 +65,16 @@ fun SelectMovieIdentificationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = DarkCard,
+        shape = RoundedCornerShape(16.dp),
         title = {
             Column {
                 Text(
                     text = "Select the movie you mean",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 19.sp,
+                    ),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -86,12 +101,12 @@ fun SelectMovieIdentificationDialog(
                     Text(
                         text = "You can save the title now and identify it later.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 180.dp, max = 460.dp),
@@ -106,13 +121,20 @@ fun SelectMovieIdentificationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onSaveTitleOnly) {
+            Button(
+                onClick = onSaveTitleOnly,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryBlue,
+                    contentColor = Color.White,
+                ),
+                shape = RoundedCornerShape(8.dp),
+            ) {
                 Text("Save Title Only")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )
@@ -127,10 +149,11 @@ fun CandidateMovieCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            containerColor = MaterialTheme.colorScheme.background,
         ),
     ) {
         Row(
@@ -148,23 +171,23 @@ fun CandidateMovieCard(
                         .build(),
                     contentDescription = candidate.title,
                     modifier = Modifier
-                        .size(width = 54.dp, height = 80.dp)
+                        .size(width = 46.dp, height = 68.dp)
                         .clip(RoundedCornerShape(6.dp)),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(width = 54.dp, height = 80.dp)
+                        .size(width = 46.dp, height = 68.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(DarkBorder),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Movie,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -180,7 +203,10 @@ fun CandidateMovieCard(
                 ) {
                     Text(
                         text = candidate.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                        ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
@@ -188,9 +214,9 @@ fun CandidateMovieCard(
                     if (candidate.releaseYear != null) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = candidate.releaseYear.toString(),
+                            text = "(${candidate.releaseYear})",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = PrimaryBlue,
                         )
                     }
                 }
@@ -218,11 +244,14 @@ fun CandidateMovieCard(
 
                 // Short overview
                 if (!candidate.overview.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = candidate.overview,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                        ),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -242,37 +271,63 @@ fun OfflineMetadataDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = DarkCard,
+        shape = RoundedCornerShape(16.dp),
         icon = {
-            Icon(
-                imageVector = Icons.Outlined.WifiOff,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-            )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.WifiOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
         },
         title = {
-            Text(text = "You're offline")
+            Text(
+                text = "You're offline",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            )
         },
         text = {
             Text(
                 text = "Movie information isn't available offline.\n\nYou can save the title now and identify it later.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp,
+                ),
             )
         },
         confirmButton = {
-            TextButton(onClick = onSaveTitleOnly) {
+            Button(
+                onClick = onSaveTitleOnly,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryBlue,
+                    contentColor = Color.White,
+                ),
+                shape = RoundedCornerShape(8.dp),
+            ) {
                 Text("Save Title Only")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )
 }
 
 /**
- * Dialog shown when metadata search fails or times out.
+ * Dialog shown when metadata search fails or times out (matching Screen 11).
  */
 @Composable
 fun MetadataFailureDialog(
@@ -283,36 +338,72 @@ fun MetadataFailureDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = DarkCard,
+        shape = RoundedCornerShape(16.dp),
+        icon = {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.WifiOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        },
         title = {
-            Text(text = "Couldn't find movie information")
+            Text(
+                text = "Unable to connect to TMDB",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            )
         },
         text = {
             Column {
                 Text(
-                    text = errorMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    text = "Please check your network connection or TMDB API key configuration in settings.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp,
+                    ),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "You can save the title and identify it later.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                if (errorMessage.isNotBlank() && !errorMessage.contains("Unable to connect", ignoreCase = true)) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                        ),
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = onSaveTitleOnly) {
-                Text("Save Title Only")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onSaveTitleOnly) {
+                    Text("Save Title Only", color = MaterialTheme.colorScheme.onSurface)
+                }
+                Button(
+                    onClick = onTryAgain,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White,
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("Try Again")
+                }
             }
         },
         dismissButton = {
-            Row {
-                TextButton(onClick = onTryAgain) {
-                    Text("Try Again")
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )

@@ -42,6 +42,9 @@ class MovieRepository(
     /** Live list of movies the user has already watched. */
     val watchedMovies: Flow<List<Movie>> = movieDao.getWatchedMovies()
 
+    /** Live list of all movie-category associations. */
+    val allCrossRefs: Flow<List<MovieCategoryCrossRef>> = categoryDao.getAllCrossRefs()
+
     // ─── Movie Write operations ───────────────────────────────────────────────
 
     /** Persists a new [movie]. ID is auto-generated and returned. */
