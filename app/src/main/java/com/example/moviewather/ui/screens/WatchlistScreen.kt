@@ -1,5 +1,6 @@
 package com.example.moviewather.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -190,6 +197,7 @@ fun WatchlistScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
+                    contentPadding = PaddingValues(bottom = 88.dp),
                 ) {
                     items(movies, key = { it.id }) { movie ->
                         WatchlistMovieCard(
@@ -232,14 +240,15 @@ private fun WatchlistMovieCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onMovieClick),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Checkbox(
@@ -250,62 +259,101 @@ private fun WatchlistMovieCard(
                 ),
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
 
+            // Consistent poster thumbnail / placeholder slot for visual alignment
             if (!movie.posterUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = movie.posterUrl,
                     contentDescription = movie.title,
                     modifier = Modifier
-                        .size(width = 36.dp, height = 52.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                        .size(width = 40.dp, height = 58.dp)
+                        .clip(RoundedCornerShape(6.dp)),
                     contentScale = ContentScale.Crop,
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(width = 40.dp, height = 58.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Movie,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(
                 modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = movie.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    if (movie.releaseYear != null) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "(${movie.releaseYear})",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-                if (movie.notes.isNotBlank()) {
+                Text(
+                    text = movie.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (movie.releaseYear != null || movie.notes.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = movie.notes,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (movie.releaseYear != null) {
+                            Text(
+                                text = movie.releaseYear.toString(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        if (movie.releaseYear != null && movie.notes.isNotBlank()) {
+                            Text(
+                                text = " • ",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        }
+                        if (movie.notes.isNotBlank()) {
+                            Text(
+                                text = movie.notes,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
 
-            IconButton(onClick = onToggleFavorite) {
+            Spacer(modifier = Modifier.width(4.dp))
+
+            IconButton(
+                onClick = onToggleFavorite,
+                modifier = Modifier.size(36.dp),
+            ) {
                 Icon(
                     imageVector = if (movie.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
                     contentDescription = if (movie.isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (movie.isFavorite) Color(0xFFFFB300) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp),
                 )
             }
 
-            IconButton(onClick = onDelete) {
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(36.dp),
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.DeleteOutline,
                     contentDescription = "Delete ${movie.title}",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
